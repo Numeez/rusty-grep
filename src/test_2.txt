@@ -1,0 +1,8 @@
+Rust is a systems programming language focused on safety and speed.
+I love learning Rust because it has zero-cost abstractions.
+Some people prefer Go over Rust for backend development.
+RUST can be used for embedded systems, too.
+This line has nothing related.
+Go and Rust can work together in polyglot systems.
+The rust compiler is strict but helpful.
+One more RUST mention in all caps.
