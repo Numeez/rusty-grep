@@ -1,8 +1,12 @@
 mod models;
+mod print;
 mod utils;
 
 use std::{env};
 use utils::*;
+use print::*;
+
+use crate::models::Config;
 
 
 
@@ -13,36 +17,36 @@ fn main() {
           std::process::exit(1);
     }
     let config = fetch_pattern_and_files(&arguments);
+    
+    let result = find_match_in_files(&config);
+    match  result {
+        Ok(result)=>{
+            display_result(result, &config);
+            std::process::exit(0)
+        },
+        Err(err)=>{
+            println!("Error occured: {}",err);
+            std::process::exit(1)
+        }
+    }
 
-    if let Ok(result) = find_match_in_files(&config.files,&config.pattern,config.ignore_case,config.recursive_search,config.regex_enable){
+}
+
+
+
+fn display_result(result:Vec<(String,Vec<(usize,String,usize)>)>,config:&Config){
     for find in result {
-        println!();
-        println!("File name: \x1b[34m{}\x1b[0m",find.0);
-        println!();
         if find.1.len()==0{
                 println!("No match found");
-            }
-         if config.line_number{
-        for line in find.1{
-            println!("Ln{}: {}",line.0+1,line.1);
-            println!();
         }
-        println!();
-    }else{
-        for line in find.1{
-            println!("{}",line.1);
-            println!();
+        if config.attached_header_name{
+            print_header_result(find,&config)
         }
-        println!();
-
+        else if config.show_counts_only{
+            print_count_only_result(find)
+       
+        }else{
+            print_result(find,&config);
+        }
     }
-    }
-    std::process::exit(0)
-}else if let Err(err) = find_match_in_files(&config.files,&config.pattern,config.ignore_case,config.recursive_search,config.regex_enable){
-    println!("Error occured: {}",err);
-    std::process::exit(1)
-    
 }
-
-}
-
