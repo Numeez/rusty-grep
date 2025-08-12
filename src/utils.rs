@@ -128,7 +128,13 @@ fn fetch_regex_result(pattern:&str,reader:&mut BufReader<File>,ignore_case:bool)
                  };
     let re = Regex::new(&regex_pattern)?;
         for (num,line)  in reader.lines().enumerate(){
-        let line = line?;
+        let line = match line {
+            Ok(l)=>l,
+            Err(err)=>{
+                 eprintln!("error encountered:{}",err);
+                 continue;
+            }
+        };
         let highlight_line = highlight_line_regex(&re, &line)?;
                 if highlight_line.0!=String::new(){
                 result.push((num,highlight_line.0,highlight_line.1));
