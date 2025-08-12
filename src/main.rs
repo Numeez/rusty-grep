@@ -15,10 +15,10 @@ use crate::models::Config;
 
 
 fn main()->Result<(),Box<dyn std::error::Error>> {
-    setup_logger()?;
+    let log_file_path = setup_logger()?;
     let config = Config::parse();
     if config.show_logs {
-         let logs = fs::read_to_string("rusty-grep.log")?;
+         let logs = fs::read_to_string(log_file_path)?;
         println!("Logs:\n{}", logs);
         Ok(())
     }else{
