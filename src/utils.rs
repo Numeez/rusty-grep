@@ -1,36 +1,8 @@
 use crate::models::{Config,FileInfo};
 use regex::Regex;
 use walkdir::{WalkDir,DirEntry};
-use std::{fs, io::{BufRead, BufReader}, vec};
+use std::{fs::{self, File}, io::{BufRead, BufReader}, vec};
 
-pub fn fetch_pattern_and_files(arguments:&Vec<String>)->Config{
-    let mut pattern_and_file : Vec<String> = vec![];
-    let mut config:Config = Config::default();
-    for (i,args )in arguments.iter().enumerate().skip(1){
-        if args.starts_with("-"){
-            match args.as_str() {
-                "-n"=> config.line_number = true,
-                "-i"=> config.ignore_case = true,
-                "-r"=>config.recursive_search = true,
-                "-E"=> config.regex_enable = true,
-                "-H"=>config.attached_header_name = true,
-                "-c"=>config.show_counts_only = true,
-                _=>{}
-
-            } 
-            continue;
-        }else{
-             pattern_and_file = arguments[i..].to_vec();
-             break;
-            
-        }
-    }
-    let pattern = &pattern_and_file[0];
-    let files:Vec<String> = pattern_and_file[1..].to_vec();
-    config.pattern = pattern.to_owned();
-    config.files = files;
-   return config
-}
 
 pub fn find_match_in_files(config:&Config)->Result<Vec<(String,Vec<FileInfo>)>,Box<dyn std::error::Error>>{
     let mut result = vec![];
@@ -62,30 +34,18 @@ pub fn find_match_in_files(config:&Config)->Result<Vec<(String,Vec<FileInfo>)>,B
 
 pub fn find_pattern_in_file(pattern:&String, file_path:&String,ignore_case:bool,regex_enable:bool)->Result<Vec<FileInfo>,Box<dyn std::error::Error>>{
     let file  = fs::File::open(file_path)?;
-    let reader = BufReader::new(file);
-    let mut result   = vec![];
-
-      for (num,line)  in reader.lines().enumerate(){
-        let line = line?;
-                    if regex_enable {
-                        let highlight_line = highlight_line_regex(pattern, &line,ignore_case)?;
-                if highlight_line.0!=String::new(){
-                result.push((num,highlight_line.0,highlight_line.1));
-                }
-                    }else{
-                let highlight_line = highlight_line(pattern, &line,ignore_case);
-                if highlight_line.0!=String::new(){
-                result.push((num,highlight_line.0,highlight_line.1));
-                }
-            }
-
-        }
-
- Ok(result)   
+    let mut reader = BufReader::new(file);
+    let  result:Vec<_>;
+    if regex_enable {
+    result = fetch_regex_result(pattern, &mut reader, ignore_case)?;
+    }else{
+       result =  fetch_result(pattern, &mut reader, ignore_case)?;
+    }
+  Ok(result)
 }
 
 
-pub fn highlight_line(pattern: &String, line: &str,ignore_case:bool) -> (String,usize) {
+pub fn highlight_line(pattern: &str, line: &str,ignore_case:bool) -> (String,usize) {
     let mut highlighted_line = String::new();
     let mut last_end = 0;
     let mut word_count =0;
@@ -116,19 +76,13 @@ pub fn highlight_line(pattern: &String, line: &str,ignore_case:bool) -> (String,
 }
 
 
-pub fn highlight_line_regex(pattern: &String,line:&str,ignore_case:bool)->Result<(String,usize),Box<dyn std::error::Error>>{
+pub fn highlight_line_regex(regex: &Regex,line:&str)->Result<(String,usize),Box<dyn std::error::Error>>{
      let mut highlighted_line = String::new();
      let mut last_end = 0;
      let mut found_match= false;
-     let mut word_count  = 0;
+     let mut word_count  = 0;   
 
-    let regex_pattern = if ignore_case {
-         format!("(?i){}", pattern)
-    }else{
-        pattern.to_string()
-    };
-    let re = Regex::new(&regex_pattern)?;
-    for mat in  re.find_iter(line){
+    for mat in  regex.find_iter(line){
         word_count+=1;
         let start = mat.start();
         let end = mat.end();
@@ -164,3 +118,36 @@ fn is_skippable(dir:&DirEntry)->bool{
     false
     }
 
+
+fn fetch_regex_result(pattern:&str,reader:&mut BufReader<File>,ignore_case:bool)->Result<Vec<FileInfo>,Box<dyn std::error::Error>>{
+    let mut result = vec![];
+    let regex_pattern = if ignore_case {
+                    format!("(?i){}", pattern)
+                    }else{
+                        pattern.to_string()
+                 };
+    let re = Regex::new(&regex_pattern)?;
+        for (num,line)  in reader.lines().enumerate(){
+        let line = line?;
+        let highlight_line = highlight_line_regex(&re, &line)?;
+                if highlight_line.0!=String::new(){
+                result.push((num,highlight_line.0,highlight_line.1));
+                }
+            }
+            Ok(result)
+}
+fn fetch_result(pattern:&str,reader:&mut BufReader<File>,ignore_case:bool)->Result<Vec<FileInfo>,Box<dyn std::error::Error>>{
+    let mut result = vec![];
+        for (num,line)  in reader.lines().enumerate(){
+        let line = line?;
+        
+        {
+                let highlight_line = highlight_line(pattern, &line,ignore_case);
+                if highlight_line.0!=String::new(){
+                result.push((num,highlight_line.0,highlight_line.1));
+                }
+            }
+
+        }
+            Ok(result)
+}
