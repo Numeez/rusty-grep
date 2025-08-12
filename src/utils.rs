@@ -1,5 +1,6 @@
 use crate::models::{Config,FileInfo};
 use regex::Regex;
+use log::{error};
 use walkdir::{WalkDir,DirEntry};
 use std::{fs::{self, File}, io::{BufRead, BufReader}, vec};
 
@@ -145,7 +146,13 @@ fn fetch_regex_result(pattern:&str,reader:&mut BufReader<File>,ignore_case:bool)
 fn fetch_result(pattern:&str,reader:&mut BufReader<File>,ignore_case:bool)->Result<Vec<FileInfo>,Box<dyn std::error::Error>>{
     let mut result = vec![];
         for (num,line)  in reader.lines().enumerate(){
-        let line = line?;
+        let line = match line {
+            Ok(l)=>l,
+            Err(err)=>{
+                error!("error encountered:{}",err);
+                continue;
+            }
+        };
         
         {
                 let highlight_line = highlight_line(pattern, &line,ignore_case);

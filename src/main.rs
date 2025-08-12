@@ -1,18 +1,27 @@
 mod models;
 mod print;
 mod utils;
+mod logger;
 
-use clap::Parser;
+use clap::{Parser};
 use utils::*;
 use print::*;
+use logger::setup_logger;
+
+use std::fs;
 
 use crate::models::Config;
 
 
 
-fn main() {
+fn main()->Result<(),Box<dyn std::error::Error>> {
+    setup_logger()?;
     let config = Config::parse();
-
+    if config.show_logs {
+         let logs = fs::read_to_string("rusty-grep.log")?;
+        println!("Logs:\n{}", logs);
+        Ok(())
+    }else{
     let result = find_match_in_files(&config);
     match  result {
         Ok(result)=>{
@@ -24,6 +33,7 @@ fn main() {
             std::process::exit(1)
         }
     }
+}
 
 }
 

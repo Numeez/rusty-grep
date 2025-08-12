@@ -25,6 +25,8 @@ pub struct Config {
     pub attached_header_name:bool,
      #[arg(short = 'c', long)]
     pub show_counts_only:bool,
+    #[arg(short = 'l', long)]
+    pub show_logs:bool,
 
 }
 
